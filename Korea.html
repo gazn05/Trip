@@ -394,6 +394,10 @@
                     {{ syncRoomID ? '中斷' : '開啟' }}
                 </button>
             </div>
+            <div v-if="syncRoomID" class="flex gap-2">
+                <button @click="pushToCloud" class="flex-1 py-2 bg-ac-green text-white rounded-xl font-black text-xs btn-press shadow-sm">手動同步</button>
+                <div class="text-[8px] font-bold text-ac-sand self-center">上次同步: {{ lastSyncTime }}</div>
+            </div>
         </div>
 
         <div class="bg-white p-6 rounded-ac shadow-soft border-2 border-ac-sand mt-4 text-left space-y-4 shadow-md">
@@ -466,6 +470,7 @@
             const syncInput = ref(initial.syncRoomID || '');
             const syncRoomID = ref(initial.syncRoomID || '');
             let isSyncingFromCloud = false;
+            const lastSyncTime = ref('尚未同步');
 
             const connectSync = () => {
                 if (syncRoomID.value) {
@@ -477,6 +482,7 @@
                     if (syncInput.value.trim().length < 4) return alert('房間名稱太短，請輸入至少4個字');
                     syncRoomID.value = syncInput.value.trim();
                     initGunSync();
+                    pushToCloud(); // 立即推送當前資料到雲端
                 }
             };
 
@@ -497,6 +503,7 @@
                         expenses.value = parsed.expenses;
                         plans.value = parsed.plans;
                         exRate.value = parsed.exRate;
+                        lastSyncTime.value = new Date().toLocaleTimeString();
                     }
                     setTimeout(() => isSyncingFromCloud = false, 500);
                 });
@@ -510,6 +517,7 @@
                     expenses: expenses.value, plans: plans.value, exRate: exRate.value
                 });
                 gun.get('seoul_travel_' + syncRoomID.value).put({ fullData: dataStr });
+                lastSyncTime.value = new Date().toLocaleTimeString();
             };
 
             // ─── 原有記帳明細核心邏輯 ───
@@ -615,7 +623,7 @@
                 copyText: (t) => { navigator.clipboard.writeText(t).then(() => alert('複製成功！🚕')); },
                 resetAllData: () => { if(confirm('確定清除？')) { localStorage.removeItem(STORAGE_KEY); location.reload(); } },
                 forecast, userPIN, rateLoading: ref(false),
-                syncInput, syncRoomID, connectSync
+                syncInput, syncRoomID, connectSync, lastSyncTime
             };
         }
     }).mount('#app');
