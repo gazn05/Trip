@@ -401,7 +401,14 @@
         </div>
 
         <div class="bg-white p-6 rounded-ac shadow-soft border-2 border-ac-sand mt-4 text-left space-y-4 shadow-md">
-            <h3 class="font-black text-ac-rose text-xs uppercase flex items-center gap-2 tracking-widest"><i data-lucide="settings" class="w-4 h-4"></i> System Settings</h3>
+            <h3 class="font-black text-ac-rose text-xs uppercase flex items-center gap-2 tracking-widest"><i data-lucide="share" class="w-4 h-4"></i> 📤 手動資料分享</h3>
+            <p class="text-[9px] font-bold text-ac-sand leading-relaxed">如果雲端同步不穩定，可以手動匯出資料並在其他裝置匯入。</p>
+            <div class="flex gap-2">
+                <button @click="exportData" class="flex-1 py-3 bg-ac-green text-white rounded-xl font-black text-xs btn-press shadow-sm">匯出資料</button>
+                <button @click="importData" class="flex-1 py-3 bg-ac-peach text-white rounded-xl font-black text-xs btn-press shadow-sm">匯入資料</button>
+            </div>
+            <textarea v-model="shareData" class="w-full p-3 bg-ac-bg rounded-xl font-mono text-xs outline-none border-b-2 border-ac-sand shadow-inner" placeholder="貼上匯出的資料..." rows="3"></textarea>
+        </div>
             <div>
                 <label class="text-[10px] font-bold opacity-40 uppercase tracking-tighter">的安全解鎖 PIN (僅數字)</label>
                 <input v-model="userPIN" maxlength="6" class="w-full p-4 bg-ac-bg rounded-2xl text-center font-black text-2xl outline-none border-b-4 border-ac-sand shadow-inner mt-1">
@@ -471,6 +478,7 @@
             const syncRoomID = ref(initial.syncRoomID || '');
             let isSyncingFromCloud = false;
             const lastSyncTime = ref('尚未同步');
+            const shareData = ref('');
 
             const connectSync = () => {
                 if (syncRoomID.value) {
@@ -518,6 +526,36 @@
                 });
                 gun.get('seoul_travel_' + syncRoomID.value).put({ fullData: dataStr });
                 lastSyncTime.value = new Date().toLocaleTimeString();
+            };
+
+            const exportData = () => {
+                const data = {
+                    tripTitle: tripTitle.value, startDate: startDate.value, endDate: endDate.value,
+                    members: members.value, schedule: schedule.value, bookingData: bookingData.value,
+                    expenses: expenses.value, plans: plans.value, exRate: exRate.value
+                };
+                shareData.value = btoa(JSON.stringify(data));
+                navigator.clipboard.writeText(shareData.value).then(() => alert('資料已複製到剪貼簿！📋'));
+            };
+
+            const importData = () => {
+                if (!shareData.value.trim()) return alert('請先貼上資料！');
+                try {
+                    const data = JSON.parse(atob(shareData.value));
+                    tripTitle.value = data.tripTitle;
+                    startDate.value = data.startDate;
+                    endDate.value = data.endDate;
+                    members.value = data.members;
+                    schedule.value = data.schedule;
+                    bookingData.value = data.bookingData;
+                    expenses.value = data.expenses;
+                    plans.value = data.plans;
+                    exRate.value = data.exRate;
+                    alert('資料匯入成功！✨');
+                    shareData.value = '';
+                } catch (e) {
+                    alert('資料格式錯誤！請檢查匯出的資料。');
+                }
             };
 
             // ─── 原有記帳明細核心邏輯 ───
@@ -623,7 +661,7 @@
                 copyText: (t) => { navigator.clipboard.writeText(t).then(() => alert('複製成功！🚕')); },
                 resetAllData: () => { if(confirm('確定清除？')) { localStorage.removeItem(STORAGE_KEY); location.reload(); } },
                 forecast, userPIN, rateLoading: ref(false),
-                syncInput, syncRoomID, connectSync, lastSyncTime
+                syncInput, syncRoomID, connectSync, lastSyncTime, shareData, exportData, importData
             };
         }
     }).mount('#app');
